@@ -31,6 +31,7 @@ fi
 
 # If we are here, the parameter is right.
 target_dir="/usr/local"
+icons_dir="/usr/share/pixmaps"
 
 cd shell
 shellfiles=$(ls *.sh)
@@ -45,13 +46,29 @@ for ff in $shellfiles; do
       echo "  Error! '$dest' is a directory!"
       continue
     fi
-    cp "shell/${ff}" "$target_dir/bin/$f"
+    cp "shell/$ff" "$target_dir/bin/$f"
     chmod +x "$target_dir/bin/$f"
-    echo -e "  $ff \t\t--> $f (chmod +x) --> $target_dir/bin"
+    echo -e "  $ff \t--> $target_dir/bin/$f"
   else
     # Uninstallation
     rm -f "$target_dir/bin/$f"
     echo -e "  Cleanning '$target_dir/bin/$f'"
+  fi
+done
+
+cd icons
+iconsfiles=$(ls *.png)
+cd ..
+
+for ff in $iconsfiles; do
+  if [ $# -eq 0 ]; then
+    # Installation
+    cp "icons/$ff" "$icons_dir/$ff"
+    echo -e "  $ff \t--> $icons_dir/$ff"
+  else
+    # Uninstallation
+    rm -f "$icons_dir/$ff"
+    echo -e "  Cleanning '$icons_dir/$ff'"
   fi
 done
 

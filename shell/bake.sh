@@ -4,7 +4,7 @@
 #        USAGE: bake
 #  DESCRIPTION: This script can be used as an alternative to 'make'. In fact,
 #               it call make, but show the output in a more friendly way.
-# REQUIREMENTS: Have the comand make install in your system.
+# REQUIREMENTS: Have the command make install in your system.
 #       AUTHOR: Diogo Luvizon <diogo@luvizon.com>
 #      VERSION: 0.2
 #      CREATED: 11/07/2014
