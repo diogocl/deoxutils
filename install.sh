@@ -30,36 +30,59 @@ if [ $EUID -ne 0 ]; then
 fi
 
 # If we are here, the parameter is right.
-target_dir="/usr/local"
+target_dir="/usr/local/bin"
 icons_dir="/usr/share/pixmaps"
 
+# Install / uninstall shell scripts
 cd shell
 shellfiles=$(ls *.sh)
 cd ..
-
 for ff in $shellfiles; do
   f=${ff%.*}
-  dest="$target_dir/bin/$f"
+  dest="$target_dir/$f"
   if [ $# -eq 0 ]; then
     # Installation
     if [ -d "$dest" ]; then
       echo "  Error! '$dest' is a directory!"
       continue
     fi
-    cp "shell/$ff" "$target_dir/bin/$f"
-    chmod +x "$target_dir/bin/$f"
-    echo -e "  $ff \t--> $target_dir/bin/$f"
+    cp "shell/$ff" "$target_dir/$f"
+    chmod +x "$target_dir/$f"
+    echo -e "  $ff \t--> $target_dir/$f"
   else
     # Uninstallation
-    rm -f "$target_dir/bin/$f"
-    echo -e "  Cleanning '$target_dir/bin/$f'"
+    rm -f "$target_dir/$f"
+    echo -e "  Cleanning '$target_dir/$f'"
   fi
 done
 
+# Install / uninstall python programs
+cd python
+pythonfiles=$(ls *.py)
+cd ..
+for ff in $pythonfiles; do
+  f=${ff%.*}
+  dest="$target_dir/$f"
+  if [ $# -eq 0 ]; then
+    # Installation
+    if [ -d "$dest" ]; then
+      echo "  Error! '$dest' is a directory!"
+      continue
+    fi
+    cp "python/$ff" "$target_dir/$f"
+    chmod +x "$target_dir/$f"
+    echo -e "  $ff \t--> $target_dir/$f"
+  else
+    # Uninstallation
+    rm -f "$target_dir/$f"
+    echo -e "  Cleanning '$target_dir/$f'"
+  fi
+done
+
+# Install / uninstall image icons
 cd icons
 iconsfiles=$(ls *.png)
 cd ..
-
 for ff in $iconsfiles; do
   if [ $# -eq 0 ]; then
     # Installation
