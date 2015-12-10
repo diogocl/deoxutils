@@ -22,6 +22,7 @@ import xml.etree.cElementTree as cet
 import xml.etree.ElementTree as et
 
 bibfile = "test.bib"
+inputfile = "paper.xml"
 
 """ Utilities functions:
 ======================== """
@@ -41,6 +42,36 @@ class bcolors:
 def printColor(color, vmsg):
     print (color + vmsg + bcolors.ENDC)
 
+def userInput(msg, expected=[], retry=False):
+    if len(expected):
+        h = re.sub(r"[^A-Za-z1-9,]+", '', str(expected))
+        h = h.replace(',', '/')
+        expected = h.split('/')
+    else:
+        h = '*'
+    while True:
+        var = raw_input("%s (%s): " % (msg, h))
+        if len(expected) == 0:
+            return var
+        for e in expected:
+            if var == e:
+                return var
+        if not retry:
+            raise ValueError("Invalid user input")
+        print("Bad answer! Try again.")
+
+def userBoolInput(msg, default=False):
+    yes = set(['Y', 'y', 'YES', 'YEs', 'Yes', 'yes', 'ye', 'ys', 'yeah',])
+    if default:
+        var = raw_input("%s (Y/n): " % msg)
+    else:
+        var = raw_input("%s (y/N): " % msg)
+    if len(var) == 0:
+        return default
+    if var in yes:
+        return True
+    return False
+
 class bibTex:
     """ A class to handle bibtex (*.bib) files. """
     def readFile(self, fname):
@@ -55,12 +86,27 @@ class bibTex:
         except:
             print("Unexpected error:", sys.exc_info()[0])
 
+class database:
+    """ A class to store the informations about a given database. """
+    def readFile(self, fname):
+        try:
+            self.tree = cet.parse(filename)
+            self.fname = fname
+        except NameError as e:
+            raise NameError("Could not read file")
+        except:
+            print("Unexpected error:", sys.exc_info()[0])
+
+    def newFile(self, fname):
+        print("Creating a new XML file...")
+
 """
 @function: _signal_handler
 @brief: Exit if reach here
 """
 def _signal_handler(signal, frame):
-    print (bcolors.WARNING + "Reached signal handler, exiting" + bcolors.ENDC)
+    print("\n" + bcolors.WARNING + \
+          "Reached signal handler, exiting" + bcolors.ENDC)
     sys.exit(0)
 
 """
@@ -76,14 +122,25 @@ if __name__ == "__main__":
     signal.signal(signal.SIGABRT, _signal_handler)
     signal.signal(signal.SIGINT, _signal_handler)
     signal.signal(signal.SIGTERM, _signal_handler)
+    #b = bibTex();
+    #b.readFile(bibfile);
+    #print(b.bibdb.entries)
+    x = database();
     try:
-        b = bibTex();
-        b.readFile(bibfile);
-        print(b.bibdb.entries)
+        x.readFile(inputfile)
+    except NameError as e:
+        print("%s: %s" % (inputfile, e))
+        if userBoolInput("Want to create a new empty file?", True):
+            x.newFile(inputfile)
+        
+        #userInput("teste 123", expected=["Y", "y", "n"], retry=True)
+        #userInput("teste 123", expected=["Y", "y", "n"], retry=False)
+        
+            
         #if len(sys.argv) < 2:
         #    _usage(sys.argv[0])
         #    raise Exception(bcolors.FAIL + "Bad arguments: " + str(sys.argv))
         #main(sys.argv[1:])
-    except Exception as e:
-       print (str(e) + bcolors.ENDC)
-       sys.exit(1)
+    #except Exception as e:
+    #   print (str(e) + bcolors.ENDC)
+    #   sys.exit(1)
