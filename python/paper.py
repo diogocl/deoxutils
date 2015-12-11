@@ -1,15 +1,14 @@
-#!/usr/bin/env paper
+#!/usr/bin/env python
 #-----------------------------------------------------------------------------
 #         FILE: paper.py
 #        USAGE: paper
 #  DESCRIPTION: Not ready yet!
-# REQUIREMENTS: Needs the packages bibtexparser and xml.etree / dom.
+# REQUIREMENTS: Needs the packages bibtexparser, xml.etree and.
 #       AUTHOR: Diogo Luvizon <diogo@luvizon.com>
 #      VERSION: 0.1
 #      CREATED: 10/12/2015
-#      CHANGED: 10/12/2015
+#      CHANGED: 11/12/2015
 #-----------------------------------------------------------------------------
-
 import os, sys
 import shutil
 import signal
@@ -17,9 +16,7 @@ import re
 
 import bibtexparser
 
-import xml.dom.minidom as minidom
-import xml.etree.cElementTree as cet
-import xml.etree.ElementTree as et
+import xml.etree.ElementTree as ET
 
 bibfile = "test.bib"
 inputfile = "paper.xml"
@@ -90,14 +87,26 @@ class database:
     """ A class to store the informations about a given database. """
     def readFile(self, fname):
         try:
-            self.tree = cet.parse(filename)
+            self.tree = ET.parse(fname)
             self.fname = fname
-        except NameError as e:
-            raise NameError("Could not read file")
+        except IOError as e:
+            raise IOError("Could not read file")
         except:
             print("Unexpected error:", sys.exc_info()[0])
 
     def newFile(self, fname):
+        self.root = ET.Element("root")
+        config = ET.SubElement(self.root, "config")
+        database = ET.SubElement(config, "database")
+        database.set('path', './database')
+        database.set('items', '0')
+        bibtex = ET.SubElement(config, "database")
+        bibtex.set('path', './bibtex')
+        bibtex.set('items', '0')
+        entries = ET.SubElement(self.root, "entries")
+        entries.set('items', '0')
+        self.tree = ET.ElementTree(self.root)
+        self.tree.write(fname)
         print("Creating a new XML file...")
 
 """
@@ -128,7 +137,7 @@ if __name__ == "__main__":
     x = database();
     try:
         x.readFile(inputfile)
-    except NameError as e:
+    except IOError as e:
         print("%s: %s" % (inputfile, e))
         if userBoolInput("Want to create a new empty file?", True):
             x.newFile(inputfile)
