@@ -7,7 +7,7 @@
 #       AUTHOR: Diogo Luvizon <diogo@luvizon.com>
 #      VERSION: 0.1
 #      CREATED: 10/12/2015
-#      CHANGED: 11/12/2015
+#      CHANGED: 12/12/2015
 #-----------------------------------------------------------------------------
 import os, sys
 import shutil
@@ -20,6 +20,10 @@ import xml.etree.ElementTree as ET
 
 bibfile = "test.bib"
 inputfile = "paper.xml"
+
+""" Holds the version of the interpreter of this f* language, because some
+functions have changed after some *improved* new versions... """
+_version = sys.version_info[0] + sys.version_info[1] / 10;
 
 """ Utilities functions:
 ======================== """
@@ -47,7 +51,10 @@ def userInput(msg, expected=[], retry=False):
     else:
         h = '*'
     while True:
-        var = raw_input("%s (%s): " % (msg, h))
+        if _version > 3.0:
+            var = input("%s (%s): " % (msg, h))
+        else:
+            var = raw_input("%s (%s): " % (msg, h))
         if len(expected) == 0:
             return var
         for e in expected:
@@ -60,9 +67,15 @@ def userInput(msg, expected=[], retry=False):
 def userBoolInput(msg, default=False):
     yes = set(['Y', 'y', 'YES', 'YEs', 'Yes', 'yes', 'ye', 'ys', 'yeah',])
     if default:
-        var = raw_input("%s (Y/n): " % msg)
+        if _version > 3.0:
+            var = input("%s (Y/n): " % msg)
+        else:
+            var = raw_input("%s (Y/n): " % msg)
     else:
-        var = raw_input("%s (y/N): " % msg)
+        if _version > 3.0:
+            var = input("%s (y/N): " % msg)
+        else:
+            var = raw_input("%s (y/N): " % msg)
     if len(var) == 0:
         return default
     if var in yes:
