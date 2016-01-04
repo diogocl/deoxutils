@@ -7,7 +7,7 @@
 #       AUTHOR: Diogo Luvizon <diogo@luvizon.com>
 #      VERSION: 0.1
 #      CREATED: 10/12/2015
-#      CHANGED: 11/12/2015
+#      CHANGED: 04/01/2016
 #-----------------------------------------------------------------------------
 import os, sys
 import shutil
@@ -47,7 +47,8 @@ def userInput(msg, expected=[], retry=False):
     else:
         h = '*'
     while True:
-        var = raw_input("%s (%s): " % (msg, h))
+        hc = bcolors.OKBLUE + h + bcolors.ENDC
+        var = raw_input("%s (%s): " % (msg, hc))
         if len(expected) == 0:
             return var
         for e in expected:
@@ -55,7 +56,7 @@ def userInput(msg, expected=[], retry=False):
                 return var
         if not retry:
             raise ValueError("Invalid user input")
-        print("Bad answer! Try again.")
+        printColor(bcolors.WARNING, "Bad answer! Try again.")
 
 def userBoolInput(msg, default=False):
     yes = set(['Y', 'y', 'YES', 'YEs', 'Yes', 'yes', 'ye', 'ys', 'yeah',])
@@ -82,32 +83,88 @@ class bibTex:
                     format(e.errno, e.strerror) % fname)
         except:
             print("Unexpected error:", sys.exc_info()[0])
-
+        
 class database:
     """ A class to store the informations about a given database. """
     def readFile(self, fname):
         try:
-            self.tree = ET.parse(fname)
             self.fname = fname
+            tree = ET.parse(fname)
+            root = tree.getroot()
+            for child in root:
+                if child.tag in "config":
+                    self.parseConfig(child)
+                if child.tag in "entries":
+                    self.parseEntries(child)
+            printColor(bcolors.HEADER, "File '%s' read, %d entries found." %
+                       (fname ,self.items))
         except IOError as e:
             raise IOError("Could not read file")
         except:
             print("Unexpected error:", sys.exc_info()[0])
-
+    
+    def parseConfig(self, cfg):
+        for child in cfg:
+            if child.tag in "database":
+                self.db_path = child.get("path")
+            if child.tag in "bibtex":
+                self.bi_path = child.get("path")
+    
+    def parseEntries(self, ent):
+        self.items = int(ent.get("items"))
+        for child in ent:
+            print child.tag
+    
     def newFile(self, fname):
         self.root = ET.Element("root")
         config = ET.SubElement(self.root, "config")
         database = ET.SubElement(config, "database")
         database.set('path', './database')
-        database.set('items', '0')
-        bibtex = ET.SubElement(config, "database")
+        bibtex = ET.SubElement(config, "bibtex")
         bibtex.set('path', './bibtex')
-        bibtex.set('items', '0')
         entries = ET.SubElement(self.root, "entries")
         entries.set('items', '0')
         self.tree = ET.ElementTree(self.root)
         self.tree.write(fname)
         print("Creating a new XML file...")
+
+class PaperHMI:
+    """ The human-machine interface class. """
+    def __init__(self, db):
+        self.db = db
+    
+    def loop(self):
+        self.listAll()
+        var = userInput("Add, remove, or edit an article entry",
+                        expected=["a", "r", "e"], retry=True)
+        if var in "a":
+            self.add()
+        elif var in "r":
+            self.rm()
+        elif var in "e":
+            self.edit()
+    
+    def listAll(self):
+        for i in range(0, self.db.items):
+            print ("list entry %d ..." % i)
+    
+    def add(self):
+        printColor(bcolors.OKGREEN, "Adding a new entry...")
+        pdf = self.checkFile("\tPDF file path")
+        bib = self.checkFile("\tBibtex file path")
+
+    def checkFile(self, msg):
+        while True:
+            fname = userInput(msg)
+            if os.path.isfile(fname):
+                return fname
+            printColor(bcolors.FAIL, "File '%s' does not exist!" % fname)
+
+    def rm(self):
+        print "rm..."
+
+    def edit(self):
+        print "edit..."
 
 """
 @function: _signal_handler
@@ -137,8 +194,10 @@ if __name__ == "__main__":
     x = database();
     try:
         x.readFile(inputfile)
+        hmi = PaperHMI(x)
+        hmi.loop()
     except IOError as e:
-        print("%s: %s" % (inputfile, e))
+        printColor(bcolors.FAIL, "%s: %s" % (inputfile, e))
         if userBoolInput("Want to create a new empty file?", True):
             x.newFile(inputfile)
         
