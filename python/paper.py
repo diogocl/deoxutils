@@ -23,7 +23,7 @@ inputfile = ".paper.xml"
 database_path = ".database"
 bibtex_path = ".bibtex"
 
-# Targets used to build the links scheme
+# Targets used to build the link scheme
 targets = ['author', 'year', 'journal', 'keyword']
 
 """ Holds the version of the interpreter of this f* language, because some
@@ -149,8 +149,9 @@ class database:
     
     def parseEntries(self, ent):
         self.items = int(ent.get("items"))
+        self.ids = []
         for child in ent:
-            print child.tag
+            self.ids.append(child.tag)
     
     def newFile(self):
         self.root = ET.Element("root")
@@ -202,7 +203,7 @@ class PaperHMI:
     
     def listAll(self):
         for i in range(0, self.db.items):
-            print ("list entry %d ..." % i)
+            print ("%03d --- %s" % (i, self.db.ids[i]))
 
     def checkFile(self, msg):
         while True:
@@ -233,17 +234,25 @@ class PaperHMI:
             except OSError as e:
                 printColor(bcolors.FAIL, "%s/%s.pdf: %s" % (p, id, e))
     
-    def add(self):
+    def add(self, pdf=None, bib=None, YES=False):
         printColor(bcolors.OKGREEN, "Adding a new entry...")
-        pdf = self.checkFile("\tPDF file path")
-        bib = self.checkFile("\tBibtex file path")
+        if (pdf != None) and (not os.path.isfile(pdf)):
+            printColor(bcolors.FAIL, "File '%s' does not exist!" % pdf)
+            pdf = None
+        if pdf == None:
+            pdf = self.checkFile("\tPDF file path")
+        if (bib != None) and (not os.path.isfile(bib)):
+            printColor(bcolors.FAIL, "File '%s' does not exist!" % bib)
+            bib = None
+        if bib == None:
+            bib = self.checkFile("\tBibtex file path")
         b = self.parseBibtex(bib)
         id = b.bibdb.entries[0][u'ID']
         newpdf = "%s/%s.pdf" % (self.db.db_path, id)
         newbib = "%s/%s.bib" % (self.db.bi_path, id)
         shutil.copyfile(pdf, newpdf)
         shutil.copyfile(bib, newbib)
-        if userBoolInput("Remove old files?", True):
+        if YES or userBoolInput("Remove old files?", True):
             os.remove(pdf)
             os.remove(bib)
         self.makeLinks(b.bibdb.entries[0], id, newpdf)
@@ -256,6 +265,10 @@ class PaperHMI:
         print "edit..."
         #b.writeFile("b.bib")
 
+def _usage(arg0):
+    print ('Usage: %s [PDF file] [Bibtex file]' % arg0)
+    print ('       No arguments to enter in loop mode.\n')
+
 """ Entry point
 =============== """
 if __name__ == "__main__":
@@ -266,23 +279,25 @@ if __name__ == "__main__":
         printColor(bcolors.FAIL, "%s: %s" % (inputfile, e))
         if userBoolInput("Want to create a new empty file?", True):
             x.newFile()
+        else:
+            exit();
     except ET.ParseError as e:
         printColor(bcolors.FAIL, "%s: %s" % (inputfile, e))
         exit()
     try:
         for t in targets:
             mkDir(t)
-        #if len(sys.argv) is 4:
-        #    _usage(sys.argv[0])
-        #    raise Exception(bcolors.FAIL + "Bad arguments: " + str(sys.argv))
-        #main(sys.argv[1:])
         hmi = PaperHMI(x)
-        hmi.loop()
+        if len(sys.argv) is 1:
+            hmi.loop()
+        elif len(sys.argv) is 3:
+            hmi.add(sys.argv[1], sys.argv[2], True)
+        else:
+            printColor(bcolors.FAIL, "\nBad arguments: %s\n" % str(sys.argv))
+            _usage(sys.argv[0])
     except SystemExit as e:
         print("\n" + bcolors.WARNING + "SystemExit" + bcolors.ENDC)
     except KeyboardInterrupt as e:
         print("\n" + bcolors.WARNING + "KeyboardInterrupt" + bcolors.ENDC)
     except:
         print("Unexpected error:", sys.exc_info()[0])
-    
-    
