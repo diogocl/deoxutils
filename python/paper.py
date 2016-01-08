@@ -25,7 +25,7 @@ database_path = ".database"
 bibtex_path = ".bibtex"
 
 # Targets used to build the link scheme
-targets = ['author', 'year', 'journal', 'keyword']
+targets = ['author', 'year', 'journal']
 
 """ Holds the version of the interpreter of this f* language, because some
 functions have changed after some *improved* new versions... """
@@ -160,6 +160,13 @@ class database:
         for child in ent:
             self.ids.append(child.tag)
     
+    def writeXML(self):
+        xmlstr = prettify(self.root)
+        fd = open(self.fname, 'w')
+        print("Creating a new XML file...")
+        fd.write(xmlstr)
+        fd.close()
+    
     def newFile(self):
         self.root = ET.Element("root")
         config = ET.SubElement(self.root, "config")
@@ -170,30 +177,22 @@ class database:
         entries = ET.SubElement(self.root, "entries")
         entries.set('items', '0')
         self.tree = ET.ElementTree(self.root)
-        xmlstr = prettify(self.root)
-        fd = open(self.fname, 'w')
-        print("Creating a new XML file...")
-        fd.write(xmlstr)
-        fd.close()
+        self.writeXML()
     
-    def add(self, ent, id):
+    def add(self, b):
         for c in self.root:
             if c.tag in "entries":
                 entries = c
                 break
-        newentry = ET.SubElement(entries, id)
+        newentry = ET.SubElement(entries, b.id)
         """ Write the new entry """
-        newpdf = "%s/%s.pdf" % (self.db_path, id)
-        newbib = "%s/%s.bib" % (self.bi_path, id)
         for t in targets:
-            newentry.set(t, ent[t])
-        newentry.set("pdf", newpdf)
-        newentry.set("bib", newbib)
+            newentry.set(t, getattr(b, t))
+        newentry.set("id", b.id)
         self.items += 1
         entries.set('items', '%d' % self.items)
         self.tree = ET.ElementTree(self.root)
-        self.tree.write(self.fname, encoding='utf8')
-        print("Updating the XML file...")
+        self.writeXML()
 
 class PaperHMI:
     """ The human-machine interface class. """
@@ -225,24 +224,61 @@ class PaperHMI:
     def parseBibtex(self, bib):
         b = bibTex()
         b.readFile(bib);
+        entries = b.bibdb.entries[0]
+        def notfound(label):
+            raise ValueError("Label '%s' not found in the BibTeX file '%s'" \
+                             % (label, bib))
         print ("\t-----------")
-        print ("\tENTRYTYPE : %s" % b.bibdb.entries[0][u'ENTRYTYPE'])
-        print ("\tID        : %s" % b.bibdb.entries[0][u'ID'])
-        print ("\tauthor    : %s" % b.bibdb.entries[0][u'author'])
-        print ("\tyear      : %s" % b.bibdb.entries[0][u'year'])
-        print ("\ttitle     : %s" % b.bibdb.entries[0][u'title'])
-        print ("\tjournal   : %s" % b.bibdb.entries[0][u'journal'])
-        print ("\tkeyword   : %s\n" % b.bibdb.entries[0][u'keyword'])
+        label = u'ENTRYTYPE'
+        if label in entries:
+            print ("\t%s: %s" % (label, entries[label]))
+        else:
+            notfound(label)
+        label = u'ID'
+        if label in entries:
+            print ("\t%s: %s" % (label, entries[label]))
+        else:
+            notfound(label)
+        label = u'author'
+        if label in entries:
+            print ("\t%s: %s" % (label, entries[label]))
+            b.author = re.findall(r"[\w']+", entries[label])[0]
+        else:
+            notfound(label)
+        label = u'year'
+        if label in entries:
+            print ("\t%s: %s" % (label, entries[label]))
+            b.year = entries[label]
+        else:
+            notfound(label)
+        label = u'title'
+        if label in entries:
+            print ("\t%s: %s" % (label, entries[label]))
+            entries[label] = '{%s}' % entries[label]
+        else:
+            notfound(label)
+        label1 = u'booktitle'
+        label1 = u'journal'
+        if label1 in entries:
+            print ("\t%s: %s" % (label1, entries[label1]))
+            b.journal = entries[label1]
+        elif label2 in entries:
+            print ("\t%s: %s" % (label2, entries[label2]))
+            b.journal = entries[label2]
+        else:
+            notfound('%s | %s' % (label1, label2)) 
+        b.id = '%s%s' % (b.author, b.year)
+        b.bibdb.entries[0][u'ID'] = b.id
         return b
     
-    def makeLinks(self, ent, id, src):
+    def makeLinks(self, b, src):
         for t in targets:
-            p = t + "/" + ent[t]
+            p = t + "/" + getattr(b, t)
             mkDir(p)
             try:
-                os.symlink("../../" + src, "%s/%s.pdf" % (p, id))
+                os.symlink("../../" + src, "%s/%s.pdf" % (p, b.id))
             except OSError as e:
-                printColor(bcolors.FAIL, "%s/%s.pdf: %s" % (p, id, e))
+                printColor(bcolors.FAIL, "%s/%s.pdf: %s" % (p, b.id, e))
     
     def add(self, pdf=None, bib=None, YES=False):
         printColor(bcolors.OKGREEN, "Adding a new entry...")
@@ -257,16 +293,15 @@ class PaperHMI:
         if bib == None:
             bib = self.checkFile("\tBibtex file path")
         b = self.parseBibtex(bib)
-        id = b.bibdb.entries[0][u'ID']
-        newpdf = "%s/%s.pdf" % (self.db.db_path, id)
-        newbib = "%s/%s.bib" % (self.db.bi_path, id)
+        newpdf = "%s/%s.pdf" % (self.db.db_path, b.id)
+        newbib = "%s/%s.bib" % (self.db.bi_path, b.id)
         shutil.copyfile(pdf, newpdf)
-        shutil.copyfile(bib, newbib)
+        b.writeFile(newbib)
         if YES or userBoolInput("Remove old files?", True):
             os.remove(pdf)
             os.remove(bib)
-        self.makeLinks(b.bibdb.entries[0], id, newpdf)
-        self.db.add(b.bibdb.entries[0], id)
+        self.makeLinks(b, newpdf)
+        self.db.add(b)
     
     def rm(self):
         print "rm..."
@@ -301,13 +336,15 @@ if __name__ == "__main__":
         if len(sys.argv) is 1:
             hmi.loop()
         elif len(sys.argv) is 3:
-            hmi.add(sys.argv[1], sys.argv[2], True)
+            hmi.add(sys.argv[1], sys.argv[2], False)
         else:
             printColor(bcolors.FAIL, "\nBad arguments: %s\n" % str(sys.argv))
             _usage(sys.argv[0])
     except SystemExit as e:
-        print("\n" + bcolors.WARNING + "SystemExit" + bcolors.ENDC)
+        printColor(bcolors.WARNING,"\nSystemExit")
     except KeyboardInterrupt as e:
-        print("\n" + bcolors.WARNING + "KeyboardInterrupt" + bcolors.ENDC)
+        printColor(bcolors.WARNING, "\nKeyboardInterrupt")
+    except ValueError as e:
+        printColor(bcolors.FAIL, "\nValueError: %s" % e)
     except:
         print("Unexpected error:", sys.exc_info()[0])
