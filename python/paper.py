@@ -18,6 +18,7 @@ import bibtexparser
 
 import xml.etree.ElementTree as ET
 from pip.locations import src_prefix
+from xml.dom import minidom
 
 inputfile = ".paper.xml"
 database_path = ".database"
@@ -91,6 +92,12 @@ def mkDir(path):
     if os.path.isdir(path) is False:
         os.mkdir(path)
 
+def prettify(elem):
+    """ Return a pretty-printed XML string for the Element. """
+    rough_string = ET.tostring(elem, 'utf-8')
+    reparsed = minidom.parseString(rough_string)
+    return reparsed.toprettyxml(indent="  ")
+
 class bibTex:
     """ A class to handle bibtex (*.bib) files. """
     def readFile(self, fname):
@@ -163,8 +170,11 @@ class database:
         entries = ET.SubElement(self.root, "entries")
         entries.set('items', '0')
         self.tree = ET.ElementTree(self.root)
-        self.tree.write(self.fname)
+        xmlstr = prettify(self.root)
+        fd = open(self.fname, 'w')
         print("Creating a new XML file...")
+        fd.write(xmlstr)
+        fd.close()
     
     def add(self, ent, id):
         for c in self.root:
