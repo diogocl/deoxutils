@@ -258,7 +258,7 @@ class PaperHMI:
         else:
             notfound(label)
         label1 = u'booktitle'
-        label1 = u'journal'
+        label2 = u'journal'
         if label1 in entries:
             print ("\t%s: %s" % (label1, entries[label1]))
             b.journal = entries[label1]
