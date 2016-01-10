@@ -1,13 +1,30 @@
 #!/usr/bin/env python
 #-----------------------------------------------------------------------------
 #         FILE: paper.py
-#        USAGE: paper
+#        USAGE: paper [PDF file] [Bibtex file]
+#               No arguments to enter in loop mode.
 #  DESCRIPTION: Not ready yet!
-# REQUIREMENTS: Needs the packages bibtexparser, xml.etree and.
+# REQUIREMENTS: Needs the packages bibtexparser and xml.etree.
 #       AUTHOR: Diogo Luvizon <diogo@luvizon.com>
-#      VERSION: 0.1
+#      VERSION: 0.2
 #      CREATED: 10/12/2015
-#      CHANGED: 04/01/2016
+#      CHANGED: 09/01/2016
+#-----------------------------------------------------------------------------
+# Copyright (C) 2015 Diogo Luvizon
+#
+#     This program is free software; you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation; either version 2 of the License, or
+#     (at your option) any later version.
+#
+#     This program is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License along
+#     with this program; if not, write to the Free Software Foundation, Inc.,
+#     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #-----------------------------------------------------------------------------
 import os, sys
 import shutil
@@ -17,7 +34,6 @@ import re
 import bibtexparser
 
 import xml.etree.ElementTree as ET
-from pip.locations import src_prefix
 from xml.dom import minidom
 
 inputfile = ".paper.xml"
@@ -25,7 +41,7 @@ database_path = ".database"
 bibtex_path = ".bibtex"
 
 # Targets used to build the link scheme
-targets = ['author', 'year', 'journal']
+targets = ['author', 'year', 'journal', 'group']
 
 """ Holds the version of the interpreter of this f* language, because some
 functions have changed after some *improved* new versions... """
@@ -94,7 +110,7 @@ def mkDir(path):
 
 def prettify(elem):
     """ Return a pretty-printed XML string for the Element. """
-    rough_string = ET.tostring(elem, 'utf-8')
+    rough_string = ET.tostring(elem, "utf-8")
     reparsed = minidom.parseString(rough_string)
     return reparsed.toprettyxml(indent="  ")
 
@@ -115,7 +131,7 @@ class bibTex:
     def writeFile(self, fname):
         try:
             btex = bibtexparser.dumps(self.bibdb)
-            fd = open(fname, 'w')
+            fd = open(fname, 'wb')
             fd.write(btex.encode('utf8', 'replace'))
             fd.close()
         except IOError as e:
@@ -161,12 +177,13 @@ class database:
             self.ids.append(child.tag)
     
     def writeXML(self):
-        xmlstr = prettify(self.root)
-        fd = open(self.fname, 'w')
+        self.tree.write(self.fname, encoding="utf-8")
+        #xmlstr = prettify(self.root)
+        #fd = open(self.fname, 'w')
         print("Creating a new XML file...")
-        fd.write(xmlstr)
-        fd.close()
-    
+        #fd.write(xmlstr)
+        #fd.close()
+        
     def newFile(self):
         self.root = ET.Element("root")
         config = ET.SubElement(self.root, "config")
@@ -184,7 +201,7 @@ class database:
             if c.tag in "entries":
                 entries = c
                 break
-        newentry = ET.SubElement(entries, b.id)
+        newentry = ET.SubElement(entries, 'paper')
         """ Write the new entry """
         for t in targets:
             newentry.set(t, getattr(b, t))
@@ -269,10 +286,13 @@ class PaperHMI:
             notfound('%s | %s' % (label1, label2)) 
         b.id = '%s%s' % (b.author, b.year)
         b.bibdb.entries[0][u'ID'] = b.id
+        b.group = ''
         return b
     
     def makeLinks(self, b, src):
         for t in targets:
+            if getattr(b, t) == '':
+                continue
             p = t + "/" + getattr(b, t)
             mkDir(p)
             try:
@@ -304,10 +324,10 @@ class PaperHMI:
         self.db.add(b)
     
     def rm(self):
-        print "rm..."
+        print ("rm...")
 
     def edit(self):
-        print "edit..."
+        print ("edit...")
         #b.writeFile("b.bib")
 
 def _usage(arg0):
