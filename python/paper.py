@@ -139,7 +139,13 @@ class bibTex:
                     format(e.errno, e.strerror) % fname)
         except:
             print("Unexpected error:", sys.exc_info()[0])
-        
+
+class paperEntry:
+    author = ''
+    group = ''
+    journal = ''
+    year = ''
+
 class database:
     def __init__(self, fname):
         self.fname = fname
@@ -172,15 +178,23 @@ class database:
     
     def parseEntries(self, ent):
         self.items = int(ent.get("items"))
-        self.ids = []
+        self.entries = {}
         for child in ent:
-            self.ids.append(child.tag)
+            if child.tag != 'paper':
+                continue
+            e = paperEntry()
+            e.author = child.get('author')
+            e.group = child.get('group')
+            e.journal = child.get('journal')
+            e.year = child.get('year')
+            e.id = child.get('id')
+            self.entries[e.id] = e
     
     def writeXML(self):
         self.tree.write(self.fname, encoding="utf-8")
         #xmlstr = prettify(self.root)
         #fd = open(self.fname, 'w')
-        print("Creating a new XML file...")
+        print("Writing XML file...")
         #fd.write(xmlstr)
         #fd.close()
         
@@ -218,18 +232,29 @@ class PaperHMI:
     
     def loop(self):
         self.listAll()
-        var = userInput("Add, remove, or edit an article entry",
-                        expected=["a", "r", "e"], retry=True)
+        optA = bcolors.OKBLUE + "A" + bcolors.ENDC
+        optR = bcolors.OKBLUE + "r" + bcolors.ENDC
+        optE = bcolors.OKBLUE + "e" + bcolors.ENDC
+        optL = bcolors.OKBLUE + "l" + bcolors.ENDC
+        var = userInput(optA + "dd, " + optR + "emove, " + optE +
+                        "dit, or (re)" + optL + "ink articles",
+                        expected=["a", "r", "e", "l"],
+                        retry=True)
         if var in "a":
             self.add()
         elif var in "r":
             self.rm()
         elif var in "e":
             self.edit()
+        elif var in 'l':
+            self.relink()
     
     def listAll(self):
-        for i in range(0, self.db.items):
-            print ("%03d --- %s" % (i, self.db.ids[i]))
+        cnt = 0
+        ent = self.db.entries
+        for e in ent:
+            print ("%03d --- %s : %s" % (cnt, ent[e].year, ent[e].author))
+            cnt += 1
 
     def checkFile(self, msg):
         while True:
@@ -327,8 +352,19 @@ class PaperHMI:
         print ("rm...")
 
     def edit(self):
-        print ("edit...")
+        print ("edit...") 
         #b.writeFile("b.bib")
+    
+    def relink(self):
+        print ("Cleaning target directories...")
+        for t in targets:
+            shutil.rmtree(t)
+            mkDir(t)
+        ent = self.db.entries
+        print ("Making links...")
+        for e in ent:
+            newpdf = "%s/%s.pdf" % (self.db.db_path, ent[e].id)
+            self.makeLinks(ent[e], newpdf)
 
 def _usage(arg0):
     print ('Usage: %s [PDF file] [Bibtex file]' % arg0)
