@@ -308,8 +308,8 @@ class PaperHMI:
             print ("\t%s: %s" % (label2, entries[label2]))
             b.journal = entries[label2]
         else:
-            notfound('%s | %s' % (label1, label2)) 
-        b.id = '%s%s' % (b.author, b.year)
+            notfound('%s | %s' % (label1, label2))
+        b.id = '%s_%s_%s' % (b.author, b.journal, b.year)
         b.bibdb.entries[0][u'ID'] = b.id
         b.group = ''
         return b
